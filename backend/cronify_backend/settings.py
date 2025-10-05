@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+# --- AÑADIDO ---
+# Importación necesaria para la configuración de JWT
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,8 +33,6 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
-# --- MODIFICADO ---
-# Se agregaron las aplicaciones de terceros y las nuestras.
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
 
     # Aplicaciones de terceros
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
 
     # Nuestras aplicaciones
@@ -50,8 +52,6 @@ INSTALLED_APPS = [
     'notifications.apps.NotificationsConfig',
 ]
 
-# --- MODIFICADO ---
-# Se agregó el middleware de CORS.
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -87,8 +87,6 @@ WSGI_APPLICATION = 'cronify_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-# --- MODIFICADO ---
-# Se cambió la base de datos de SQLite a PostgreSQL.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -97,9 +95,6 @@ DATABASES = {
         'PASSWORD': '123',
         'HOST': 'localhost',
         'PORT': '5432',
-        'OPTIONS': {
-            'client_encoding': 'UTF8',
-        },
     }
 }
 
@@ -126,7 +121,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-# --- MODIFICADO ---
 LANGUAGE_CODE = 'es-co'
 TIME_ZONE = 'America/Bogota'
 
@@ -156,3 +150,16 @@ CORS_ALLOWED_ORIGINS = [
 
 # Especifica nuestro modelo de usuario personalizado
 AUTH_USER_MODEL = 'users.Usuario'
+
+# --- AÑADIDO ---
+# Configuración para Django REST Framework y SimpleJWT
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+}
