@@ -1,17 +1,40 @@
 from rest_framework import serializers
-from .models import Evento
+from .models import Evento, ArchivoAdjunto
+
+class ArchivoAdjuntoSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el modelo ArchivoAdjunto.
+    """
+    class Meta:
+        model = ArchivoAdjunto
+        fields = [
+            'id',
+            'evento',
+            'archivo',
+            'nombre_original',
+            'tipo_mime',
+            'tamaño_bytes',
+            'fecha_carga'
+        ]
+        read_only_fields = [
+            'evento',
+            'nombre_original',
+            'tipo_mime',
+            'tamaño_bytes',
+            'fecha_carga'
+        ]
+
 
 class EventoSerializer(serializers.ModelSerializer):
     """
-    Traduce el modelo Evento a formato JSON y viceversa.
+    Serializador para el modelo Evento.
     """
-    # Muestra el nombre de usuario del creador en lugar de solo su ID.
-    # Es de solo lectura porque se establece automáticamente.
     creador_username = serializers.ReadOnlyField(source='creador.username')
+    # Muestra los archivos adjuntos relacionados con cada evento.
+    archivos_adjuntos = ArchivoAdjuntoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Evento
-        # Especifica los campos del modelo que se incluirán en la API.
         fields = [
             'id',
             'asunto',
@@ -21,7 +44,8 @@ class EventoSerializer(serializers.ModelSerializer):
             'creador',
             'creador_username',
             'fecha_creacion',
-            'notificar_a'
+            'notificar_a',
+            'archivos_adjuntos'
         ]
-        # El campo 'creador' es de solo lectura en la API.
         read_only_fields = ['creador']
+

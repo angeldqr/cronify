@@ -1,32 +1,52 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from django.db.models import Q
-from .models import Evento
-from .serializers import EventoSerializer
+from .models import Evento, ArchivoAdjunto
+from .serializers import EventoSerializer, ArchivoAdjuntoSerializer
+from .permissions import IsOwnerOrReadOnly
 
 class EventoViewSet(viewsets.ModelViewSet):
     """
-    API endpoint que permite ver o editar eventos.
+    API endpoint para Eventos, con una acción para subir archivos.
     """
     serializer_class = EventoSerializer
-    # Solo los usuarios autenticados pueden interactuar con esta API.
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        """
-        Este método personaliza la consulta a la base de datos.
-        Asegura que un usuario solo pueda ver los eventos que le corresponden:
-        1. Todos los eventos públicos.
-        2. Los eventos privados que él mismo creó.
-        3. Los eventos privados en los que fue añadido para ser notificado.
-        """
         user = self.request.user
         return Evento.objects.filter(
-            Q(es_publico=True) | Q(creador=user) | Q(notificar_a=user)
+            Q(es_publico=True) | Q(creador=user) | Q(notificar_a=user),
+            deleted_at__isnull=True
         ).distinct().order_by('fecha_vencimiento')
 
     def perform_create(self, serializer):
-        """
-        Este método se ejecuta al crear un nuevo evento.
-        Asigna automáticamente al usuario autenticado como el creador del evento.
-        """
         serializer.save(creador=self.request.user)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsOwnerOrReadOnly])
+    def upload_file(self, request, pk=None):
+        """
+        Acción personalizada para subir un archivo adjunto a un evento específico.
+        URL: /api/eventos/{id}/upload_file/
+        """
+        evento = self.get_object()
+        file = request.FILES.get('archivo')
+
+        if not file:
+            return Response(
+                {'detail': 'No se proporcionó ningún archivo.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Crea la instancia del archivo adjunto en la base de datos
+        adjunto = ArchivoAdjunto.objects.create(
+            evento=evento,
+            archivo=file,
+            nombre_original=file.name,
+            tipo_mime=file.content_type,
+            tamaño_bytes=file.size
+        )
+
+        serializer = ArchivoAdjuntoSerializer(adjunto)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
