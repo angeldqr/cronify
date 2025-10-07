@@ -1,33 +1,94 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Q
+from django.db.models import Q, Sum
+from django.utils import timezone
+from datetime import datetime
 from .models import Evento, ArchivoAdjunto
 from .serializers import EventoSerializer, ArchivoAdjuntoSerializer
 from .permissions import IsOwnerOrReadOnly
 
 class EventoViewSet(viewsets.ModelViewSet):
     """
-    API endpoint para Eventos, con una acción para subir archivos.
+    API endpoint para Eventos con búsqueda y filtrado.
+    
+    Parámetros de búsqueda/filtrado:
+    - search: Busca en asunto y descripción
+    - fecha_inicio: Filtra eventos desde esta fecha
+    - fecha_fin: Filtra eventos hasta esta fecha
+    - creador: Filtra por ID del creador
+    - notificado: true/false para filtrar por estado de notificación
     """
     serializer_class = EventoSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
         user = self.request.user
-        return Evento.objects.filter(
+        queryset = Evento.objects.filter(
             Q(es_publico=True) | Q(creador=user) | Q(notificar_a=user),
             deleted_at__isnull=True
-        ).distinct().order_by('fecha_vencimiento')
+        ).distinct()
+
+        # Búsqueda por texto en asunto y descripción
+        search = self.request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(
+                Q(asunto__icontains=search) | Q(descripcion__icontains=search)
+            )
+
+        # Filtrado por rango de fechas
+        fecha_inicio = self.request.query_params.get('fecha_inicio', None)
+        fecha_fin = self.request.query_params.get('fecha_fin', None)
+        
+        if fecha_inicio:
+            try:
+                fecha_inicio_dt = datetime.fromisoformat(fecha_inicio.replace('Z', '+00:00'))
+                queryset = queryset.filter(fecha_vencimiento__gte=fecha_inicio_dt)
+            except ValueError:
+                pass  # Ignora fechas inválidas
+        
+        if fecha_fin:
+            try:
+                fecha_fin_dt = datetime.fromisoformat(fecha_fin.replace('Z', '+00:00'))
+                queryset = queryset.filter(fecha_vencimiento__lte=fecha_fin_dt)
+            except ValueError:
+                pass  # Ignora fechas inválidas
+
+        # Filtrado por creador
+        creador_id = self.request.query_params.get('creador', None)
+        if creador_id:
+            queryset = queryset.filter(creador__id=creador_id)
+
+        # Filtrado por estado de notificación
+        notificado = self.request.query_params.get('notificado', None)
+        if notificado is not None:
+            if notificado.lower() == 'true':
+                queryset = queryset.filter(notificacion_enviada=True)
+            elif notificado.lower() == 'false':
+                queryset = queryset.filter(notificacion_enviada=False)
+
+        return queryset.order_by('fecha_vencimiento')
 
     def perform_create(self, serializer):
         serializer.save(creador=self.request.user)
+
+    def perform_destroy(self, instance):
+        """
+        Implementa eliminación lógica (soft delete).
+        En lugar de eliminar el registro, marca deleted_at con la fecha actual.
+        """
+        instance.deleted_at = timezone.now()
+        instance.save()
 
     @action(detail=True, methods=['post'], permission_classes=[IsOwnerOrReadOnly])
     def upload_file(self, request, pk=None):
         """
         Acción personalizada para subir un archivo adjunto a un evento específico.
         URL: /api/eventos/{id}/upload_file/
+        
+        Límites:
+        - Máximo 10MB por archivo
+        - Máximo 50MB total por evento
         """
         evento = self.get_object()
         file = request.FILES.get('archivo')
@@ -38,7 +99,27 @@ class EventoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Crea la instancia del archivo adjunto en la base de datos
+        # Validar tamaño del archivo individual (10MB)
+        MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB en bytes
+        if file.size > MAX_FILE_SIZE:
+            return Response(
+                {'detail': f'El archivo excede el tamaño máximo permitido de 10MB. Tamaño actual: {file.size / (1024*1024):.2f}MB'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validar tamaño total de archivos del evento (50MB)
+        MAX_TOTAL_SIZE = 50 * 1024 * 1024  # 50MB en bytes
+        total_size = evento.archivos_adjuntos.aggregate(
+            total=Sum('tamaño_bytes')
+        )['total'] or 0
+        
+        if total_size + file.size > MAX_TOTAL_SIZE:
+            return Response(
+                {'detail': f'El evento ya tiene {total_size / (1024*1024):.2f}MB de archivos. El límite total es 50MB.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Crear la instancia del archivo adjunto en la base de datos
         adjunto = ArchivoAdjunto.objects.create(
             evento=evento,
             archivo=file,
@@ -49,4 +130,6 @@ class EventoViewSet(viewsets.ModelViewSet):
 
         serializer = ArchivoAdjuntoSerializer(adjunto)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
 

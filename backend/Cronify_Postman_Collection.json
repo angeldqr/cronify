@@ -1,0 +1,541 @@
+{
+	"info": {
+		"_postman_id": "cronify-backend-collection",
+		"name": "Cronify Backend API",
+		"description": "Colección completa para probar todos los endpoints de Cronify",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Autenticación",
+			"item": [
+				{
+					"name": "Registrar Usuario",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser\",\n    \"email\": \"testuser@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login (Obtener Token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"access_token\", jsonData.access);",
+									"    pm.environment.set(\"refresh_token\", jsonData.refresh);",
+									"    console.log(\"Token guardado: \" + jsonData.access);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/token/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "token", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refrescar Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/token/refresh/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "token", "refresh", ""]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Perfil de Usuario",
+			"item": [
+				{
+					"name": "Ver Perfil",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/profile/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "profile", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Editar Perfil",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"Test\",\n    \"last_name\": \"User\",\n    \"email\": \"testuser@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/profile/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "profile", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cambiar Contraseña",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"old_password\": \"password123\",\n    \"new_password\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/change-password/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "change-password", ""]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Eventos - CRUD",
+			"item": [
+				{
+					"name": "Listar Eventos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/eventos/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Evento",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"evento_id\", jsonData.id);",
+									"    console.log(\"Evento creado con ID: \" + jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"asunto\": \"Renovación de Licencia de Software\",\n    \"descripcion\": \"Renovar licencia antes del vencimiento para evitar interrupciones\",\n    \"fecha_vencimiento\": \"2025-12-31T23:59:59Z\",\n    \"notificacion_valor\": 15,\n    \"notificacion_unidad\": \"días\",\n    \"es_publico\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/eventos/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Evento Específico",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/eventos/{{evento_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", "{{evento_id}}", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Evento",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"asunto\": \"Renovación de Licencia - Actualizado\",\n    \"descripcion\": \"Descripción actualizada del evento\",\n    \"fecha_vencimiento\": \"2025-12-31T23:59:59Z\",\n    \"notificacion_valor\": 30,\n    \"notificacion_unidad\": \"días\",\n    \"es_publico\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/eventos/{{evento_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", "{{evento_id}}", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Evento (Soft Delete)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/eventos/{{evento_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", "{{evento_id}}", ""]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Búsqueda y Filtrado",
+			"item": [
+				{
+					"name": "Buscar por Texto",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/eventos/?search=licencia",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", ""],
+							"query": [
+								{
+									"key": "search",
+									"value": "licencia"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Filtrar por Rango de Fechas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/eventos/?fecha_inicio=2025-11-01T00:00:00Z&fecha_fin=2025-12-31T23:59:59Z",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", ""],
+							"query": [
+								{
+									"key": "fecha_inicio",
+									"value": "2025-11-01T00:00:00Z"
+								},
+								{
+									"key": "fecha_fin",
+									"value": "2025-12-31T23:59:59Z"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Filtrar No Notificados",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/eventos/?notificado=false",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", ""],
+							"query": [
+								{
+									"key": "notificado",
+									"value": "false"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Búsqueda Combinada",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/eventos/?search=renovación&notificado=false&fecha_inicio=2025-11-01T00:00:00Z",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", ""],
+							"query": [
+								{
+									"key": "search",
+									"value": "renovación"
+								},
+								{
+									"key": "notificado",
+									"value": "false"
+								},
+								{
+									"key": "fecha_inicio",
+									"value": "2025-11-01T00:00:00Z"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "5. Archivos Adjuntos",
+			"item": [
+				{
+					"name": "Subir Archivo",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "archivo",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/eventos/{{evento_id}}/upload_file/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", "{{evento_id}}", "upload_file", ""]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "6. Validaciones (Casos de Error)",
+			"item": [
+				{
+					"name": "Error - Contraseña Corta",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"erroruser\",\n    \"email\": \"error@example.com\",\n    \"password\": \"1234567\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Error - Asunto Corto",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"asunto\": \"Test\",\n    \"fecha_vencimiento\": \"2025-12-31T23:59:59Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/eventos/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", ""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Error - Fecha Pasada",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"asunto\": \"Evento con fecha pasada\",\n    \"fecha_vencimiento\": \"2024-01-01T00:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/eventos/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "eventos", ""]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000"
+		},
+		{
+			"key": "access_token",
+			"value": ""
+		},
+		{
+			"key": "refresh_token",
+			"value": ""
+		},
+		{
+			"key": "evento_id",
+			"value": ""
+		}
+	]
+}

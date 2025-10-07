@@ -19,6 +19,7 @@ class Evento(models.Model):
     asunto = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, null=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
     fecha_vencimiento = models.DateTimeField()
     notificacion_valor = models.PositiveIntegerField(default=7)
     notificacion_unidad = models.CharField(
