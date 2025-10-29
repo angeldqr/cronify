@@ -46,4 +46,22 @@ export const authService = {
     const response = await api.post('/auth/change-password/', passwordData);
     return response.data;
   },
+
+  // Autenticación con Microsoft
+  async getMicrosoftLoginUrl() {
+    const response = await api.get('/auth/microsoft/login/');
+    return response.data.auth_url;
+  },
+
+  // Maneja el callback de Microsoft OAuth
+  loginWithMicrosoft(accessToken, refreshToken) {
+    localStorage.setItem('access_token', accessToken);
+    localStorage.setItem('refresh_token', refreshToken);
+  },
+
+  // Refresca el token de Microsoft
+  async refreshMicrosoftToken() {
+    const response = await api.post('/auth/microsoft/refresh-token/');
+    return response.data;
+  },
 };

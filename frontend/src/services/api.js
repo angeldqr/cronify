@@ -28,6 +28,26 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Error de red (sin conexión)
+    if (!error.response) {
+      console.error('Error de red: Sin conexión al servidor');
+      // Puedes mostrar una notificación aquí si tienes acceso a Quasar
+      return Promise.reject({
+        message: 'No se pudo conectar al servidor. Verifica tu conexión a internet.',
+        isNetworkError: true
+      });
+    }
+
+    // Error 500 del servidor
+    if (error.response?.status >= 500) {
+      console.error('Error del servidor:', error.response.status);
+      return Promise.reject({
+        message: 'Error del servidor. Por favor intenta más tarde.',
+        isServerError: true,
+        status: error.response.status
+      });
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
@@ -50,7 +70,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/auth/login';
+        window.location.href = '/auth';
         return Promise.reject(refreshError);
       }
     }

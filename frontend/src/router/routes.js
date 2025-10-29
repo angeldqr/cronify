@@ -10,14 +10,11 @@ const routes = [
         component: () => import('pages/auth/AuthPage.vue'),
         meta: { requiresAuth: false },
       },
-      // Rutas antiguas redirigen a la nueva
       {
-        path: 'login',
-        redirect: '/auth',
-      },
-      {
-        path: 'register',
-        redirect: '/auth',
+        path: 'callback',
+        name: 'auth-callback',
+        component: () => import('pages/auth/LoginPage.vue'),
+        meta: { requiresAuth: false },
       },
     ],
   },
@@ -44,14 +41,14 @@ const routes = [
         component: () => import('pages/eventos/EventoDetailPage.vue'),
       },
       {
-        path: 'calendario',
-        name: 'calendario',
-        component: () => import('pages/eventos/CalendarioPage.vue'),
-      },
-      {
         path: 'perfil',
         name: 'perfil',
         component: () => import('pages/perfil/PerfilPage.vue'),
+      },
+      {
+        path: 'configuracion',
+        name: 'configuracion',
+        component: () => import('pages/ConfiguracionPage.vue'),
       },
     ],
   },

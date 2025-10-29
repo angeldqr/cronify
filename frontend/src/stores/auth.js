@@ -66,7 +66,7 @@ export const useAuthStore = defineStore('auth', {
       this.isAuthenticated = false;
     },
 
-    checkAuth() {
+    async checkAuth() {
       const token = localStorage.getItem('access_token');
       if (token) {
         try {
@@ -76,7 +76,8 @@ export const useAuthStore = defineStore('auth', {
           if (decoded.exp > now) {
             this.isAuthenticated = true;
             this.accessToken = token;
-            this.loadProfile();
+            this.refreshToken = localStorage.getItem('refresh_token');
+            await this.loadProfile();
           } else {
             this.logout();
           }

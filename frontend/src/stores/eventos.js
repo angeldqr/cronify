@@ -12,6 +12,7 @@ export const useEventosStore = defineStore('eventos', {
       fecha_hasta: null,
       creador: null,
       notificacion_enviada: null,
+      es_publico: null,
     },
     pagination: {
       page: 1,
@@ -144,6 +145,7 @@ export const useEventosStore = defineStore('eventos', {
         fecha_hasta: null,
         creador: null,
         notificacion_enviada: null,
+        es_publico: null,
       };
     },
 

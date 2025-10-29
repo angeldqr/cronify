@@ -52,6 +52,22 @@
             />
           </div>
 
+          <!-- Divider -->
+          <div class="row items-center q-my-md">
+            <div class="col">
+              <q-separator />
+            </div>
+            <div class="col-auto q-px-md text-grey-6">O</div>
+            <div class="col">
+              <q-separator />
+            </div>
+          </div>
+
+          <!-- Botón de Microsoft -->
+          <div class="q-mt-md">
+            <MicrosoftLoginButton class="full-width" />
+          </div>
+
           <div class="text-center q-mt-md">
             <router-link to="/auth/register" class="text-primary">
               ¿No tienes cuenta? Regístrate
@@ -64,12 +80,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from '../../stores/auth';
+import MicrosoftLoginButton from '../../components/auth/MicrosoftLoginButton.vue';
+import { authService } from '../../services/authService';
 
 const router = useRouter();
+const route = useRoute();
 const $q = useQuasar();
 const authStore = useAuthStore();
 
@@ -80,6 +99,32 @@ const loginForm = ref({
 
 const showPassword = ref(false);
 const loading = ref(false);
+
+// Manejar callback de Microsoft OAuth
+onMounted(() => {
+  const { access, refresh, error } = route.query;
+  
+  if (error) {
+    $q.notify({
+      type: 'negative',
+      message: 'Error al autenticarse con Microsoft',
+      caption: 'Por favor, intenta nuevamente'
+    });
+    // Limpiar la URL
+    router.replace('/auth/login');
+  } else if (access && refresh) {
+    // Guardar tokens y redirigir
+    authService.loginWithMicrosoft(access, refresh);
+    authStore.fetchUser().then(() => {
+      $q.notify({
+        type: 'positive',
+        message: 'Inicio de sesión exitoso con Microsoft',
+        position: 'top',
+      });
+      router.push('/');
+    });
+  }
+});
 
 const handleLogin = async () => {
   loading.value = true;

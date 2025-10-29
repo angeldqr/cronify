@@ -149,16 +149,43 @@ const handleRegister = async () => {
     });
     router.push('/auth/login');
   } catch (error) {
-    const errorMessage =
-      error.response?.data?.email?.[0] ||
-      error.response?.data?.username?.[0] ||
-      error.response?.data?.password?.[0] ||
-      'Error al registrarse. Intenta de nuevo.';
-
+    console.log('Error completo:', error.response?.data);
+    let errorMessage = 'Error al registrarse. Intenta de nuevo.';
+    if (error.response?.data) {
+      const errors = error.response.data;
+      // Si la contraseña es débil, mostrar mensaje personalizado
+      if (errors.password && Array.isArray(errors.password)) {
+        const debil = errors.password.some(
+          (msg) =>
+            msg.includes('demasiado común') ||
+            msg.includes('completamente numérica') ||
+            msg.includes('password') ||
+            msg.includes('common') ||
+            msg.includes('entirely numeric')
+        );
+        if (debil) {
+          errorMessage =
+            'La contraseña es demasiado débil. Usa al menos 8 caracteres, combinando letras y números.';
+        } else {
+          errorMessage = errors.password.join(' ');
+        }
+      } else if (errors.email && Array.isArray(errors.email)) {
+        errorMessage = errors.email[0];
+      } else if (errors.username && Array.isArray(errors.username)) {
+        errorMessage = errors.username[0];
+      } else if (typeof errors.password === 'string') {
+        errorMessage = errors.password;
+      } else if (typeof errors.email === 'string') {
+        errorMessage = errors.email;
+      } else if (typeof errors.username === 'string') {
+        errorMessage = errors.username;
+      }
+    }
     $q.notify({
       type: 'negative',
       message: errorMessage,
       position: 'top',
+      timeout: 4000,
     });
   } finally {
     loading.value = false;
