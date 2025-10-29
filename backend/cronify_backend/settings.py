@@ -16,9 +16,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',  # Requerido por allauth
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.microsoft',
     'users.apps.UsersConfig',
     'records.apps.RecordsConfig',
     'notifications.apps.NotificationsConfig',
@@ -33,6 +38,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',  # Requerido por allauth
 ]
 
 ROOT_URLCONF = 'cronify_backend.urls'
@@ -88,6 +94,56 @@ CORS_ALLOWED_ORIGINS = config(
 
 AUTH_USER_MODEL = 'users.Usuario'
 
+# Django Sites Framework (requerido por allauth)
+SITE_ID = 1
+
+# Configuración de Django Allauth
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # Cambiar a 'mandatory' si quieres verificación
+
+# Configuración de Microsoft OAuth
+SOCIALACCOUNT_PROVIDERS = {
+    'microsoft': {
+        'APP': {
+            'client_id': config('MICROSOFT_CLIENT_ID', default=''),
+            'secret': config('MICROSOFT_CLIENT_SECRET', default=''),
+            'key': ''
+        },
+        'SCOPE': [
+            'User.Read',
+            'Mail.Send',
+            'offline_access',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'offline',
+        }
+    }
+}
+
+# Microsoft Graph API Configuration
+MICROSOFT_GRAPH_API_ENDPOINT = 'https://graph.microsoft.com/v1.0'
+MICROSOFT_AUTHORITY = config(
+    'MICROSOFT_AUTHORITY',
+    default='https://login.microsoftonline.com/common'
+)
+MICROSOFT_TENANT_ID = config('MICROSOFT_TENANT_ID', default='common')
+MICROSOFT_CLIENT_ID = config('MICROSOFT_CLIENT_ID', default='')
+MICROSOFT_CLIENT_SECRET = config('MICROSOFT_CLIENT_SECRET', default='')
+MICROSOFT_REDIRECT_URI = config(
+    'MICROSOFT_REDIRECT_URI',
+    default='http://localhost:8000/api/auth/microsoft/callback/'
+)
+
+# Usar Microsoft Graph para envío de correos
+USE_MICROSOFT_GRAPH = config('USE_MICROSOFT_GRAPH', default=True, cast=bool)
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -127,3 +183,38 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
+
+# Configuración de Logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'users': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+

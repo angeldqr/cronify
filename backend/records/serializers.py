@@ -1,12 +1,15 @@
 from rest_framework import serializers
 from django.utils import timezone
 from .models import Evento, ArchivoAdjunto
+from users.models import Usuario
 
 
 class ArchivoAdjuntoSerializer(serializers.ModelSerializer):
     """
     Serializador para el modelo ArchivoAdjunto.
     """
+    url_descarga = serializers.SerializerMethodField()
+    
     class Meta:
         model = ArchivoAdjunto
         fields = [
@@ -16,7 +19,8 @@ class ArchivoAdjuntoSerializer(serializers.ModelSerializer):
             'nombre_original',
             'tipo_mime',
             'tamaño_bytes',
-            'fecha_carga'
+            'fecha_carga',
+            'url_descarga'
         ]
         read_only_fields = [
             'evento',
@@ -25,6 +29,15 @@ class ArchivoAdjuntoSerializer(serializers.ModelSerializer):
             'tamaño_bytes',
             'fecha_carga'
         ]
+    
+    def get_url_descarga(self, obj):
+        """
+        Retorna la URL completa para descargar el archivo.
+        """
+        request = self.context.get('request')
+        if obj.archivo and request:
+            return request.build_absolute_uri(obj.archivo.url)
+        return None
 
 
 class EventoSerializer(serializers.ModelSerializer):
@@ -32,7 +45,13 @@ class EventoSerializer(serializers.ModelSerializer):
     Serializador para el modelo Evento.
     """
     creador_username = serializers.ReadOnlyField(source='creador.username')
+    creador_nombre = serializers.ReadOnlyField(source='creador.nombre')
     archivos_adjuntos = ArchivoAdjuntoSerializer(many=True, read_only=True)
+    notificar_a = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Usuario.objects.filter(is_active=True),
+        required=False
+    )
 
     class Meta:
         model = Evento
@@ -46,6 +65,7 @@ class EventoSerializer(serializers.ModelSerializer):
             'es_publico',
             'creador',
             'creador_username',
+            'creador_nombre',
             'fecha_creacion',
             'fecha_modificacion',
             'notificar_a',
@@ -54,6 +74,27 @@ class EventoSerializer(serializers.ModelSerializer):
             'fecha_notificacion',
         ]
         read_only_fields = ['creador', 'fecha_creacion', 'fecha_modificacion', 'notificacion_enviada', 'fecha_notificacion']
+
+    def create(self, validated_data):
+        notificar_a_ids = validated_data.pop('notificar_a', [])
+        evento = Evento.objects.create(**validated_data)
+        
+        if notificar_a_ids:
+            evento.notificar_a.set(notificar_a_ids)
+        
+        return evento
+
+    def update(self, instance, validated_data):
+        notificar_a_ids = validated_data.pop('notificar_a', None)
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        if notificar_a_ids is not None:
+            instance.notificar_a.set(notificar_a_ids)
+        
+        return instance
 
     def validate_asunto(self, value):
         """

@@ -60,13 +60,22 @@ class EventoViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(creador__id=creador_id)
 
         # Filtrado por estado de notificación
-        notificado = self.request.query_params.get('notificado', None)
-        if notificado is not None:
-            if notificado.lower() == 'true':
+        notificacion_enviada = self.request.query_params.get('notificacion_enviada', None)
+        if notificacion_enviada is not None:
+            if notificacion_enviada.lower() == 'true':
                 queryset = queryset.filter(notificacion_enviada=True)
-            elif notificado.lower() == 'false':
+            elif notificacion_enviada.lower() == 'false':
                 queryset = queryset.filter(notificacion_enviada=False)
 
+        # Filtrado por visibilidad (público/privado)
+        es_publico = self.request.query_params.get('es_publico', None)
+        if es_publico is not None:
+            if es_publico.lower() == 'true':
+                queryset = queryset.filter(es_publico=True)
+            elif es_publico.lower() == 'false':
+                queryset = queryset.filter(es_publico=False)
+
+        # Ordenar por fecha de vencimiento (más próximos primero)
         return queryset.order_by('fecha_vencimiento')
 
     def perform_create(self, serializer):

@@ -2,9 +2,23 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 class Usuario(AbstractUser):
-    # Heredamos todos los campos de AbstractUser (username, email, etc.)
-    # y podemos añadir más en el futuro si es necesario.
-    pass
+    nombre = models.CharField(max_length=200, blank=True, default='')
+    
+    # Campos para autenticación Microsoft OAuth
+    microsoft_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    microsoft_access_token = models.TextField(blank=True, null=True)
+    microsoft_refresh_token = models.TextField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.nombre and (self.first_name or self.last_name):
+            self.nombre = f"{self.first_name} {self.last_name}".strip()
+        elif not self.nombre:
+            self.nombre = self.username
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.username
+        return self.nombre if self.nombre else self.username
+    
+    def get_full_name(self):
+        """Retorna el nombre completo del usuario"""
+        return self.nombre if self.nombre else super().get_full_name()
