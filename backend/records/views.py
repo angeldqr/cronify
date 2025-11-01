@@ -140,5 +140,29 @@ class EventoViewSet(viewsets.ModelViewSet):
         serializer = ArchivoAdjuntoSerializer(adjunto)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['delete'], url_path='archivos/(?P<archivo_id>[^/.]+)', permission_classes=[IsOwnerOrReadOnly])
+    def delete_archivo(self, request, pk=None, archivo_id=None):
+        """
+        Acción personalizada para eliminar un archivo adjunto de un evento.
+        URL: /api/eventos/{id}/archivos/{archivo_id}/
+        """
+        evento = self.get_object()
+        
+        try:
+            archivo = ArchivoAdjunto.objects.get(id=archivo_id, evento=evento)
+            archivo.delete()
+            return Response(
+                {'detail': 'Archivo eliminado exitosamente.'},
+                status=status.HTTP_204_NO_CONTENT
+            )
+        except ArchivoAdjunto.DoesNotExist:
+            return Response(
+                {'detail': 'Archivo no encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+
+
 
 

@@ -385,6 +385,7 @@ const usuariosFiltrados = ref([]);
 const isDragging = ref(false);
 const fileInputRef = ref(null);
 const hasUnsavedChanges = ref(false);
+const archivosEliminados = ref([]); // IDs de archivos existentes que se eliminaron
 
 const formData = ref({
   asunto: '',
@@ -451,6 +452,16 @@ const loadEventoData = () => {
     
     const hora = fechaVencimiento.toTimeString().slice(0, 5);
     
+    // Cargar archivos adjuntos existentes como objetos simulados para mostrar
+    const archivosExistentes = (props.evento.archivos_adjuntos || []).map(archivo => ({
+      name: archivo.nombre_original,
+      size: archivo.tamaño_bytes || 0,
+      type: archivo.tipo_mime || '',
+      isExisting: true,
+      id: archivo.id,
+      url_descarga: archivo.url_descarga
+    }));
+    
     formData.value = {
       asunto: props.evento.asunto || '',
       fecha: fecha,
@@ -460,8 +471,11 @@ const loadEventoData = () => {
       notificacion_unidad: props.evento.notificacion_unidad || 'días',
       es_publico: props.evento.es_publico ?? true,
       notificar_a: props.evento.notificar_a || [],
-      archivos: []
+      archivos: archivosExistentes
     };
+    
+    // Resetear la lista de archivos eliminados
+    archivosEliminados.value = [];
   }
 };
 
@@ -544,10 +558,24 @@ const formatFileSize = (bytes) => {
 };
 
 const removeFile = (index) => {
+  const archivo = formData.value.archivos[index];
+  
+  // Si es un archivo existente (del servidor), guardar su ID para eliminarlo después
+  if (archivo.isExisting && archivo.id) {
+    archivosEliminados.value.push(archivo.id);
+  }
+  
   formData.value.archivos.splice(index, 1);
 };
 
 const clearAllFiles = () => {
+  // Guardar IDs de todos los archivos existentes para eliminarlos
+  formData.value.archivos.forEach(archivo => {
+    if (archivo.isExisting && archivo.id) {
+      archivosEliminados.value.push(archivo.id);
+    }
+  });
+  
   formData.value.archivos = [];
 };
 
@@ -608,13 +636,16 @@ const processFiles = (files) => {
 };
 
 const uploadFiles = async (eventoId) => {
-  if (formData.value.archivos.length === 0) {
+  // Filtrar solo archivos nuevos (no los que ya están en el servidor)
+  const archivosNuevos = formData.value.archivos.filter(file => !file.isExisting);
+  
+  if (archivosNuevos.length === 0) {
     return;
   }
 
   const uploadPromises = [];
   
-  for (const file of formData.value.archivos) {
+  for (const file of archivosNuevos) {
     const formDataFile = new FormData();
     formDataFile.append('archivo', file);
     
@@ -631,6 +662,23 @@ const uploadFiles = async (eventoId) => {
     await Promise.all(uploadPromises);
   } catch (error) {
     console.error('Error al subir archivos:', error);
+    throw error;
+  }
+};
+
+const deleteFiles = async (eventoId) => {
+  if (archivosEliminados.value.length === 0) {
+    return;
+  }
+
+  const deletePromises = archivosEliminados.value.map(archivoId => 
+    api.delete(`/eventos/${eventoId}/archivos/${archivoId}/`)
+  );
+
+  try {
+    await Promise.all(deletePromises);
+  } catch (error) {
+    console.error('Error al eliminar archivos:', error);
     throw error;
   }
 };
@@ -689,11 +737,28 @@ const handleSubmit = async () => {
     let evento;
     if (isEditMode.value) {
       evento = await eventosStore.updateEvento(props.evento.id, eventoData);
+      
+      // Eliminar archivos que fueron removidos
+      if (archivosEliminados.value.length > 0) {
+        try {
+          await deleteFiles(props.evento.id);
+        } catch {
+          $q.notify({
+            type: 'warning',
+            message: 'Evento actualizado pero algunos archivos no se pudieron eliminar',
+            icon: 'warning',
+            position: 'top',
+            timeout: 3000
+          });
+        }
+      }
     } else {
       evento = await eventosStore.createEvento(eventoData);
     }
 
-    if (formData.value.archivos.length > 0) {
+    // Subir solo archivos nuevos
+    const archivosNuevos = formData.value.archivos.filter(file => !file.isExisting);
+    if (archivosNuevos.length > 0) {
       try {
         await uploadFiles(evento.id);
       } catch {
