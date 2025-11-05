@@ -1,8 +1,8 @@
 {
   "name": "quasar-project",
   "version": "0.0.1",
-  "description": "A Quasar Project",
-  "productName": "Quasar App",
+  "description": "Gestión de eventos y notificaciones",
+  "productName": "Cronify",
   "author": "Ángel Quintero <angelquinteror102@gmail.com>",
   "type": "module",
   "private": true,
