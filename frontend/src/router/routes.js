@@ -19,11 +19,10 @@ const routes = [
     ],
   },
 
-  // Rutas protegidas
+  // Rutas principales (demo sin autenticación)
   {
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true },
     children: [
       {
         path: '',

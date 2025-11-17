@@ -20,24 +20,13 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     history: createHistory(process.env.VUE_ROUTER_BASE),
   });
 
-  // Protege las rutas que requieren autenticación
+  // Demo mode: Sin autenticación para Vercel
   Router.beforeEach((to, from, next) => {
-    const token = localStorage.getItem('access_token');
-    const isAuthenticated = !!token;
-
-    const publicPages = ['auth'];
-    const isPublicPage = publicPages.includes(to.name);
-
-    if (isAuthenticated && isPublicPage) {
+    // Redirigir de auth a home siempre
+    if (to.path.startsWith('/auth')) {
       next({ name: 'home' });
       return;
     }
-
-    if (!isAuthenticated && !isPublicPage) {
-      next({ name: 'auth' });
-      return;
-    }
-
     next();
   });
 
