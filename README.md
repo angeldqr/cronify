@@ -65,7 +65,18 @@ Sistema web integral para la gestión, seguimiento y notificación proactiva de 
   - Registro tradicional (usuario/contraseña)
   - Perfil de usuario con estadísticas
   - Cambio de contraseña
+  - Sistema de roles (Administrador/Usuario)
   - Permisos granulares (solo el creador puede editar/eliminar)
+
+- **Panel de Administración**
+  - Gestión completa de usuarios del sistema
+  - Promoción y degradación de administradores
+  - Tabla con paginación configurable (10/25/50/100 por página)
+  - Búsqueda y filtros avanzados (Admin/Normal, Activo/Inactivo)
+  - Estadísticas de usuarios (total, admins)
+  - Protección: no se puede eliminar el último admin ni auto-degradarse
+  - Vista de todos los eventos del sistema (públicos y privados)
+  - Indicador visual "Vista Admin" cuando se visualizan todos los eventos
 
 - **Archivos Adjuntos**
   - Subida múltiple con drag & drop
@@ -97,6 +108,8 @@ Sistema web integral para la gestión, seguimiento y notificación proactiva de 
 <img src="screenshots/pantallaeditarevento.png" alt="Editar Evento" width="600" />
 <img src="screenshots/pantallaperfil.png" alt="Perfil de Usuario" width="600" />
 <img src="screenshots/sistemanotificaciones.png" alt="Sistema de Notificaciones" width="600" />
+<img src="screenshots/gestiondeadministradores.png" alt="Gestión de Administradores" width="600" />
+<img src="screenshots/eventosfiltrotodosadmin.png" alt="Vista Admin - Todos los Eventos" width="600" />
 </div>
 
 ---
@@ -227,6 +240,18 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
+**8. (Opcional) Crear Usuarios de Prueba y Datos de Demostración**
+```bash
+# Generar 150 usuarios de prueba
+python manage.py create_test_users
+
+# Generar 100 eventos de prueba
+python manage.py create_test_events
+
+# Promover un usuario a administrador
+python manage.py make_admin correo@ejemplo.com
+```
+
 ---
 
 ### Frontend (Vue + Quasar)
@@ -344,12 +369,21 @@ http://localhost:8000/api
 
 | Método | Endpoint | Descripción | Requiere Auth |
 |--------|----------|-------------|---------------|
-| POST   | /auth/register/      | Registrar usuario         | No  |
-| POST   | /token/              | Login (obtener JWT)       | No  |
-| POST   | /token/refresh/      | Refrescar token           | No  |
-| GET    | /auth/profile/       | Ver perfil                | Sí  |
-| PUT    | /auth/profile/       | Actualizar perfil         | Sí  |
-| POST   | /auth/change-password/| Cambiar contraseña       | Sí  |
+| POST   | /auth/register/           | Registrar usuario         | No  |
+| POST   | /token/                   | Login (obtener JWT)       | No  |
+| POST   | /token/refresh/           | Refrescar token           | No  |
+| GET    | /auth/profile/            | Ver perfil                | Sí  |
+| PUT    | /auth/profile/            | Actualizar perfil         | Sí  |
+| POST   | /auth/change-password/    | Cambiar contraseña        | Sí  |
+
+### Administración (Solo Admins)
+
+| Método | Endpoint | Descripción | Requiere Auth |
+|--------|----------|-------------|---------------|
+| GET    | /auth/admins/                  | Listar todos los usuarios      | Admin |
+| POST   | /auth/admins/{id}/promote/     | Promover usuario a admin       | Admin |
+| POST   | /auth/admins/{id}/demote/      | Degradar admin a usuario       | Admin |
+| GET    | /eventos/admin/all/            | Ver TODOS los eventos          | Admin |
 
 ### Eventos
 
@@ -367,7 +401,7 @@ http://localhost:8000/api
 
 | Método | Endpoint | Descripción | Requiere Auth |
 |--------|----------|-------------|---------------|
-| GET    | /usuarios/ | Listar usuarios (para notificar) | Sí |
+| GET    | /auth/list/ | Listar usuarios (para notificar) | Sí |
 
 ### Parámetros de Filtrado
 
@@ -414,6 +448,41 @@ GET /api/eventos/?search=licencia&notificacion_enviada=false&page=1
 
 ---
 
+## Comandos de Gestión
+
+### Comandos de Administración
+
+**Promover un usuario a administrador:**
+```bash
+cd backend
+python manage.py make_admin correo@usuario.com
+```
+
+**Crear usuarios de prueba (150 usuarios):**
+```bash
+python manage.py create_test_users
+```
+
+**Crear eventos de prueba (100 eventos):**
+```bash
+python manage.py create_test_events
+```
+
+### Permisos de Administrador
+
+Los administradores tienen acceso completo a:
+- ✅ **Ver todos los eventos** del sistema (públicos y privados de cualquier usuario)
+- ✅ **Gestionar otros administradores** (promover/degradar usuarios)
+- ✅ **Panel de administración** con estadísticas y filtros avanzados
+- ✅ **Todas las funcionalidades** de usuario normal
+
+**Protecciones de seguridad:**
+- ❌ Un admin no puede degradarse a sí mismo
+- ❌ No se puede degradar al último administrador del sistema
+- ✅ Validación de permisos en cada petición al backend
+
+---
+
 ## Estructura del Proyecto
 
 ```
@@ -421,13 +490,25 @@ Cronify/
 │
 ├── backend/                  # Backend Django
 │   ├── cronify_backend/      # Configuración principal
-│   ├── users/                # App de usuarios
+│   ├── users/                # App de usuarios (con sistema de roles)
+│   │   ├── models.py         # Usuario con campo is_admin
+│   │   ├── permissions.py    # IsAdmin, IsAdminOrReadOnly
+│   │   └── management/       # Comandos: make_admin, create_test_users
 │   ├── records/              # App de eventos y archivos
+│   │   ├── views.py          # ViewSet con endpoint all_eventos_admin
+│   │   └── management/       # Comandos: create_test_events
 │   ├── notifications/        # App de notificaciones
 │   ├── media/                # Archivos adjuntos
 │   └── docs/                 # Documentación
 ├── frontend/                 # Frontend Vue + Quasar
-│   ├── src/                  # Código fuente
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── eventos/      # Lista y gestión de eventos
+│   │   │   └── admin/        # AdminsManagementPage.vue
+│   │   ├── services/
+│   │   │   └── adminService.js  # API calls de administración
+│   │   └── stores/
+│   │       └── auth.js       # Store con isAdmin getter
 │   ├── public/               # Recursos estáticos
 │   └── ...
 ├── screenshots/              # Capturas de pantalla
@@ -461,9 +542,19 @@ Consulta el historial de cambios en el repositorio para detalles sobre nuevas fu
 
 ## Preguntas Frecuentes
 
+**Autenticación:**
 - ¿Puedo usar el sistema sin Microsoft OAuth? Sí, el login tradicional está disponible.
 - ¿Qué pasa si no configuro el correo? Las notificaciones automáticas no se enviarán, pero el resto del sistema funciona.
+
+**Administración:**
+- ¿Cómo creo el primer administrador? Usa el comando `python manage.py make_admin correo@usuario.com`
+- ¿Cuántos administradores puede haber? No hay límite, pero el sistema protege que siempre haya al menos uno.
+- ¿Los admins pueden ver eventos privados de otros usuarios? Sí, cuando seleccionan el filtro "Todos (Admin)" en la página de eventos.
+- ¿Los usuarios normales pueden ver el panel de administración? No, las rutas están protegidas y solo son accesibles para administradores.
+
+**Técnico:**
 - ¿Puedo usar otra base de datos? El sistema está optimizado para PostgreSQL, pero puedes adaptar la configuración.
+- ¿Cómo genero datos de prueba? Usa `python manage.py create_test_users` y `python manage.py create_test_events`
 
 ---
 
