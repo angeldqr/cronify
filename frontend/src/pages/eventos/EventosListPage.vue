@@ -1,8 +1,8 @@
 <template>
-  <q-page class="q-pa-md page-background">
-    <div class="page-header q-mb-lg">
-      <div class="row justify-between items-center">
-        <div>
+  <q-page class="q-pa-sm q-pa-md-md page-background">
+    <div class="page-header q-mb-md q-mb-md-lg">
+      <div class="row justify-between items-center q-col-gutter-sm">
+        <div class="col-12 col-sm-auto">
           <h4 class="page-title">
             Mis Eventos
             <q-badge v-if="viewMode === 'admin'" color="red" label="Vista Admin" class="q-ml-sm" />
@@ -11,14 +11,16 @@
             {{ viewMode === 'admin' ? 'Visualizando TODOS los eventos del sistema' : 'Lista completa de todos tus eventos' }}
           </p>
         </div>
-        <q-btn
-          unelevated
-          icon="add"
-          label="Crear Evento"
-          color="primary"
-          class="create-event-btn"
-          @click="showCreateModal = true"
-        />
+        <div class="col-12 col-sm-auto">
+          <q-btn
+            unelevated
+            icon="add"
+            :label="$q.screen.gt.xs ? 'Crear Evento' : 'Crear'"
+            color="primary"
+            class="create-event-btn full-width"
+            @click="showCreateModal = true"
+          />
+        </div>
       </div>
     </div>
 

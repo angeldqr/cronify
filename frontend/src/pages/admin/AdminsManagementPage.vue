@@ -1,28 +1,28 @@
 <template>
-  <q-page padding>
-    <div class="q-pa-md">
+  <q-page class="q-pa-sm q-pa-md-md">
+    <div class="q-pa-sm q-pa-md-md">
       <!-- Header -->
-      <div class="row items-center q-mb-lg">
-        <div class="col">
-          <h4 class="q-my-none text-h4 text-weight-bold">
-            <q-icon name="admin_panel_settings" size="32px" class="q-mr-sm" color="primary" />
-            Gestión de Administradores
+      <div class="row items-center q-mb-md q-mb-md-lg q-col-gutter-sm">
+        <div class="col-12 col-md-auto">
+          <h4 class="q-my-none text-h5 text-h4-md text-weight-bold">
+            <q-icon name="admin_panel_settings" :size="$q.screen.gt.xs ? '32px' : '28px'" class="q-mr-sm" color="primary" />
+            {{ $q.screen.gt.xs ? 'Gestión de Administradores' : 'Administradores' }}
           </h4>
-          <p class="text-grey-7 q-mt-sm">
-            Administra los usuarios con privilegios de administrador del sistema
+          <p class="text-grey-7 q-mt-sm text-caption text-body2-md">
+            {{ $q.screen.gt.xs ? 'Administra los usuarios con privilegios de administrador del sistema' : 'Gestión de usuarios admin' }}
           </p>
         </div>
-        <div class="col-auto">
-          <div class="row q-gutter-md">
+        <div class="col-12 col-md-auto">
+          <div class="row q-gutter-sm q-gutter-md-md justify-center justify-md-end">
             <q-card flat bordered class="stat-card">
-              <q-card-section class="q-pa-md text-center">
-                <div class="text-h5 text-primary text-weight-bold">{{ users.length }}</div>
+              <q-card-section class="q-pa-sm q-pa-md-md text-center">
+                <div class="text-h6 text-h5-md text-primary text-weight-bold">{{ users.length }}</div>
                 <div class="text-caption text-grey-7">Total Usuarios</div>
               </q-card-section>
             </q-card>
             <q-card flat bordered class="stat-card">
-              <q-card-section class="q-pa-md text-center">
-                <div class="text-h5 text-red text-weight-bold">{{ adminCount }}</div>
+              <q-card-section class="q-pa-sm q-pa-md-md text-center">
+                <div class="text-h6 text-h5-md text-red text-weight-bold">{{ adminCount }}</div>
                 <div class="text-caption text-grey-7">Administradores</div>
               </q-card-section>
             </q-card>
@@ -32,14 +32,14 @@
 
       <!-- Búsqueda y filtros -->
       <q-card flat bordered class="q-mb-md">
-        <q-card-section>
-          <div class="row q-col-gutter-md">
+        <q-card-section class="q-pa-sm q-pa-md-md">
+          <div class="row q-col-gutter-sm q-col-gutter-md-md">
             <div class="col-12 col-md-6">
               <q-input
                 v-model="searchQuery"
                 outlined
                 dense
-                placeholder="Buscar por nombre o email..."
+                :placeholder="$q.screen.gt.xs ? 'Buscar por nombre o email...' : 'Buscar...'"
                 clearable
               >
                 <template v-slot:prepend>
@@ -80,7 +80,56 @@
           class="admin-table"
           binary-state-sort
           hide-pagination
+          :grid="$q.screen.lt.md"
         >
+          <!-- Vista Grid para móviles -->
+          <template v-slot:item="props" v-if="$q.screen.lt.md">
+            <div class="q-pa-sm col-xs-12">
+              <q-card flat bordered>
+                <q-card-section>
+                  <div class="row items-center q-gutter-sm q-mb-sm">
+                    <q-avatar color="primary" text-color="white" size="40px">
+                      {{ props.row.nombre ? props.row.nombre.charAt(0).toUpperCase() : 'U' }}
+                    </q-avatar>
+                    <div class="col">
+                      <div class="text-weight-medium">{{ props.row.nombre || 'Sin nombre' }}</div>
+                      <div class="text-caption text-grey-7">{{ props.row.username }}</div>
+                    </div>
+                    <q-badge 
+                      :color="props.row.is_admin ? 'red' : 'grey-6'" 
+                      :label="props.row.is_admin ? 'Admin' : 'Usuario'"
+                    />
+                  </div>
+                  <div class="text-caption text-grey-7 q-mb-sm">
+                    {{ props.row.email }}
+                  </div>
+                  <div class="row justify-end q-gutter-xs">
+                    <q-btn
+                      v-if="!props.row.is_admin"
+                      size="sm"
+                      color="positive"
+                      label="Promover"
+                      icon="arrow_upward"
+                      dense
+                      unelevated
+                      @click="promoteToAdmin(props.row)"
+                    />
+                    <q-btn
+                      v-else
+                      size="sm"
+                      color="negative"
+                      label="Degradar"
+                      icon="arrow_downward"
+                      dense
+                      outline
+                      @click="removeFromAdmin(props.row)"
+                    />
+                  </div>
+                </q-card-section>
+              </q-card>
+            </div>
+          </template>
+
           <!-- Columna de nombre -->
           <template v-slot:body-cell-nombre="props">
             <q-td :props="props">
@@ -420,5 +469,31 @@ onMounted(() => {
 .stat-card:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
+}
+
+/* Mejoras Responsive */
+@media (max-width: 600px) {
+  .stat-card {
+    min-width: 100px;
+  }
+  
+  .admin-table {
+    font-size: 12px;
+  }
+  
+  .q-table th,
+  .q-table td {
+    padding: 4px 8px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .text-h5-md {
+    font-size: 1.25rem;
+  }
+  
+  .text-body2-md {
+    font-size: 0.875rem;
+  }
 }
 </style>

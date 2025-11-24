@@ -1,1 +1,69 @@
 // app global css in SCSS form
+
+// ============================================
+// MEJORAS RESPONSIVE GLOBALES
+// ============================================
+
+// Estilos responsive para títulos
+.page-title {
+  font-size: 28px;
+  
+  @media (max-width: 600px) {
+    font-size: 22px;
+  }
+}
+
+.page-subtitle {
+  font-size: 14px;
+  
+  @media (max-width: 600px) {
+    font-size: 13px;
+  }
+}
+
+// Ajustes de padding responsivos
+.q-page {
+  @media (max-width: 600px) {
+    padding: 8px !important;
+  }
+}
+
+// Cards responsivos
+.q-card {
+  @media (max-width: 600px) {
+    border-radius: 8px;
+  }
+}
+
+// Botones responsivos
+.q-btn {
+  @media (max-width: 600px) {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+}
+
+// Modales responsivos
+.q-dialog__inner {
+  @media (max-width: 600px) {
+    padding: 8px;
+  }
+}
+
+// Tabla responsive
+.q-table {
+  @media (max-width: 600px) {
+    font-size: 12px;
+    
+    th, td {
+      padding: 8px 4px;
+    }
+  }
+}
+
+// Inputs y selects responsivos
+.q-field {
+  @media (max-width: 600px) {
+    font-size: 14px;
+  }
+}

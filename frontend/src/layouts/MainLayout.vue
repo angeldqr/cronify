@@ -17,23 +17,26 @@
           <div class="logo-container">
             <q-icon name="schedule" size="28px" color="white" />
           </div>
-          <div>
+          <div class="gt-xs">
             <div class="text-weight-bold text-h6 text-white">Cronify</div>
             <div class="text-caption" style="color: rgba(255, 255, 255, 0.9);">Sistema de Gestión de Vencimientos</div>
+          </div>
+          <div class="lt-sm">
+            <div class="text-weight-bold text-body1 text-white">Cronify</div>
           </div>
         </q-toolbar-title>
 
         <q-space />
 
         <!-- Notificaciones -->
-        <q-btn flat round dense icon="notifications" color="white" class="q-mr-sm">
+        <q-btn flat round dense icon="notifications" color="white" :class="$q.screen.gt.xs ? 'q-mr-sm' : ''">
           <q-badge color="red" floating rounded v-if="stats.upcoming > 0">
             {{ stats.upcoming }}
           </q-badge>
           <q-tooltip>Próximos vencimientos</q-tooltip>
           
           <q-menu transition-show="scale" transition-hide="scale" :offset="[0, 8]">
-            <q-card style="width: 400px; max-width: 90vw;" class="notifications-card">
+            <q-card :style="$q.screen.gt.xs ? 'width: 400px; max-width: 90vw;' : 'width: 320px; max-width: 95vw;'" class="notifications-card">
               <q-card-section class="notification-header">
                 <div class="text-h6 text-white">Próximos Vencimientos</div>
                 <div class="text-caption" style="color: rgba(255,255,255,0.9);">

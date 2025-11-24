@@ -1,9 +1,9 @@
 <template>
-  <q-card style="min-width: 750px; max-width: 850px; max-height: 90vh; border-radius: 16px; display: flex; flex-direction: column;" class="event-detail-modal">
+  <q-card :style="$q.screen.gt.md ? 'min-width: 750px; max-width: 850px; max-height: 90vh; border-radius: 16px; display: flex; flex-direction: column;' : 'width: 100%; max-width: 95vw; max-height: 90vh; border-radius: 8px; display: flex; flex-direction: column;'" class="event-detail-modal">
     <div class="modal-header">
       <div class="header-content">
         <div class="header-title">
-          <h5 class="event-title">{{ event.asunto }}</h5>
+          <h5 :class="$q.screen.gt.xs ? 'event-title' : 'event-title-mobile'">{{ event.asunto }}</h5>
           <div class="badges-row">
             <span class="badge" :class="event.es_publico ? 'badge-public' : 'badge-private'">
               <q-icon :name="event.es_publico ? 'lock_open' : 'lock'" size="14px" class="q-mr-xs" />
@@ -22,8 +22,8 @@
       </div>
     </div>
 
-    <q-card-section class="modal-body scroll" style="flex: 1; overflow-y: auto;">
-      <div class="info-grid">
+    <q-card-section class="modal-body scroll q-pa-sm q-pa-md-md" style="flex: 1; overflow-y: auto;">
+      <div :class="$q.screen.gt.sm ? 'info-grid' : 'info-grid-mobile'">
         <div class="info-item">
           <div class="info-icon-wrapper blue">
             <q-icon name="schedule" size="24px" />
@@ -473,6 +473,44 @@ const handleDelete = () => {
 
     &:hover {
       transform: translateY(-1px);
+    }
+  }
+}
+
+/* Estilos Responsive */
+@media (max-width: 600px) {
+  .event-title-mobile {
+    font-size: 18px !important;
+    margin: 0 0 10px 0;
+    font-weight: 600;
+    color: white;
+    line-height: 1.3;
+  }
+
+  .modal-header {
+    padding: 20px 16px 18px;
+  }
+
+  .info-grid-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .info-item {
+    padding: 16px;
+  }
+
+  .files-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+
+  .modal-actions {
+    padding: 12px 16px;
+    flex-direction: column;
+
+    .action-btn {
+      width: 100%;
     }
   }
 }
