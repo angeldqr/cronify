@@ -6,6 +6,7 @@ import {
   createWebHashHistory,
 } from 'vue-router';
 import routes from './routes';
+import { useAuthStore } from 'src/stores/auth';
 
 export default defineRouter(function (/* { store, ssrContext } */) {
   const createHistory = process.env.SERVER
@@ -20,7 +21,7 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     history: createHistory(process.env.VUE_ROUTER_BASE),
   });
 
-  // Protege las rutas que requieren autenticación
+  // Protege las rutas que requieren autenticación y permisos de admin
   Router.beforeEach((to, from, next) => {
     const token = localStorage.getItem('access_token');
     const isAuthenticated = !!token;
@@ -28,6 +29,7 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     const publicPages = ['auth'];
     const isPublicPage = publicPages.includes(to.name);
 
+    // Verificar autenticación
     if (isAuthenticated && isPublicPage) {
       next({ name: 'home' });
       return;
@@ -36,6 +38,17 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     if (!isAuthenticated && !isPublicPage) {
       next({ name: 'auth' });
       return;
+    }
+
+    // Protección de rutas de administrador
+    if (to.meta.requiresAdmin) {
+      const authStore = useAuthStore();
+      
+      if (!authStore.isAdmin) {
+        // Redirigir si no es admin
+        next({ name: 'home' });
+        return;
+      }
     }
 
     next();

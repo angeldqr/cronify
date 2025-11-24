@@ -50,6 +50,12 @@ const routes = [
         name: 'configuracion',
         component: () => import('pages/ConfiguracionPage.vue'),
       },
+      {
+        path: 'administradores',
+        name: 'administradores',
+        component: () => import('pages/admin/AdminsManagementPage.vue'),
+        meta: { requiresAdmin: true }, // Solo accesible para admins
+      },
     ],
   },
 

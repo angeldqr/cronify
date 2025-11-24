@@ -52,6 +52,8 @@ class EventoSerializer(serializers.ModelSerializer):
         queryset=Usuario.objects.filter(is_active=True),
         required=False
     )
+    # Campo adicional para asegurar que los IDs se devuelven correctamente en la respuesta
+    notificar_a_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = Evento
@@ -69,11 +71,18 @@ class EventoSerializer(serializers.ModelSerializer):
             'fecha_creacion',
             'fecha_modificacion',
             'notificar_a',
+            'notificar_a_ids',
             'archivos_adjuntos',
             'notificacion_enviada',
             'fecha_notificacion',
         ]
         read_only_fields = ['creador', 'fecha_creacion', 'fecha_modificacion', 'notificacion_enviada', 'fecha_notificacion']
+    
+    def get_notificar_a_ids(self, obj):
+        """
+        Devuelve los IDs de los usuarios notificados.
+        """
+        return list(obj.notificar_a.values_list('id', flat=True))
 
     def create(self, validated_data):
         notificar_a_ids = validated_data.pop('notificar_a', [])

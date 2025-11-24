@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q, Sum
 from django.utils import timezone
 from datetime import datetime
@@ -179,6 +180,7 @@ def all_eventos_admin(request):
     - fecha_inicio: Filtra eventos desde esta fecha
     - fecha_fin: Filtra eventos hasta esta fecha
     - creador: Filtra por ID del creador
+    - page: Número de página (paginación de 20 eventos)
     """
     # Obtener TODOS los eventos no eliminados
     queryset = Evento.objects.filter(deleted_at__isnull=True).order_by('-fecha_creacion')
@@ -213,12 +215,14 @@ def all_eventos_admin(request):
     if creador:
         queryset = queryset.filter(creador_id=creador)
     
-    serializer = EventoSerializer(queryset, many=True)
+    # Aplicar paginación
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+    paginated_queryset = paginator.paginate_queryset(queryset, request)
     
-    return Response({
-        'count': queryset.count(),
-        'eventos': serializer.data
-    })
+    serializer = EventoSerializer(paginated_queryset, many=True, context={'request': request})
+    
+    return paginator.get_paginated_response(serializer.data)
 
 
 

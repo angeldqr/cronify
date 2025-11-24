@@ -3,8 +3,13 @@
     <div class="page-header q-mb-lg">
       <div class="row justify-between items-center">
         <div>
-          <h4 class="page-title">Mis Eventos</h4>
-          <p class="page-subtitle">Lista completa de todos tus eventos</p>
+          <h4 class="page-title">
+            Mis Eventos
+            <q-badge v-if="viewMode === 'admin'" color="red" label="Vista Admin" class="q-ml-sm" />
+          </h4>
+          <p class="page-subtitle">
+            {{ viewMode === 'admin' ? 'Visualizando TODOS los eventos del sistema' : 'Lista completa de todos tus eventos' }}
+          </p>
         </div>
         <q-btn
           unelevated
@@ -221,6 +226,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import { useEventosStore } from '../../stores/eventos';
 import { useAuthStore } from '../../stores/auth';
+import adminService from '../../services/adminService';
 import CreateEventModal from '../../components/eventos/CreateEventModal.vue';
 import EventDetailModal from '../../components/eventos/EventDetailModal.vue';
 
@@ -238,12 +244,23 @@ const currentPage = ref(1);
 const searchQuery = ref('');
 const filterPublico = ref(null);
 const filterNotificado = ref(null);
+const viewMode = ref('normal'); // 'normal' o 'admin' - para vista de administrador
 let searchTimeout = null;
 
-const opcionesPublico = [
-  { label: 'Público', value: true },
-  { label: 'Privado', value: false }
-];
+// Opciones de filtro - se agregan condicionalmente basado en si es admin
+const opcionesPublico = computed(() => {
+  const opciones = [
+    { label: 'Público', value: true },
+    { label: 'Privado', value: false }
+  ];
+  
+  // Si es admin, agregar opción de ver todos
+  if (authStore.isAdmin) {
+    opciones.push({ label: 'Todos (Admin)', value: 'admin' });
+  }
+  
+  return opciones;
+});
 
 const opcionesNotificado = [
   { label: 'Notificados', value: true },
@@ -299,6 +316,13 @@ const onSearchChange = () => {
 
 const onFilterChange = () => {
   currentPage.value = 1;
+  
+  // Si se seleccionó "Todos (Admin)", cargar directamente con el servicio de admin
+  if (filterPublico.value === 'admin') {
+    loadEventos();
+    return;
+  }
+  
   // Si no hay filtros activos, recargar sin filtros
   if (!hasActiveFilters.value) {
     eventosStore.clearFilters();
@@ -322,7 +346,8 @@ const applyFiltersAndLoad = async () => {
   if (searchQuery.value) {
     filters.search = searchQuery.value;
   }
-  if (filterPublico.value !== null && filterPublico.value !== undefined) {
+  // Solo enviar filtro público si no es 'admin'
+  if (filterPublico.value !== null && filterPublico.value !== undefined && filterPublico.value !== 'admin') {
     filters.es_publico = filterPublico.value;
   }
   if (filterNotificado.value !== null && filterNotificado.value !== undefined) {
@@ -418,7 +443,31 @@ const onPageChange = (page) => {
 const loadEventos = async () => {
   loading.value = true;
   try {
-    await eventosStore.fetchEventos(currentPage.value);
+    // Si se seleccionó "Todos (Admin)", usar el servicio de admin
+    if (filterPublico.value === 'admin' && authStore.isAdmin) {
+      viewMode.value = 'admin';
+      const filters = {};
+      if (searchQuery.value) filters.search = searchQuery.value;
+      
+      // Pasar la página actual al servicio de admin
+      const response = await adminService.getAllEvents(filters, currentPage.value);
+      
+      // Actualizar el store manualmente con los datos de admin
+      eventosStore.eventos = response.results || response.eventos || response;
+      eventosStore.pagination.count = response.count || response.length;
+      eventosStore.pagination.next = response.next || null;
+      eventosStore.pagination.previous = response.previous || null;
+    } else {
+      viewMode.value = 'normal';
+      await eventosStore.fetchEventos(currentPage.value);
+    }
+  } catch (error) {
+    console.error('Error al cargar eventos:', error);
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar eventos',
+      caption: error.message
+    });
   } finally {
     loading.value = false;
   }

@@ -8,11 +8,13 @@ export const useAuthStore = defineStore('auth', {
     accessToken: localStorage.getItem('access_token'),
     refreshToken: localStorage.getItem('refresh_token'),
     isAuthenticated: !!localStorage.getItem('access_token'),
+    isAdmin: false, // Estado para saber si el usuario es administrador
   }),
 
   getters: {
     currentUser: (state) => state.user,
     isLoggedIn: (state) => state.isAuthenticated,
+    isUserAdmin: (state) => state.isAdmin, // Getter para verificar si es admin
   },
 
   actions: {
@@ -42,6 +44,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const profile = await authService.getProfile();
         this.user = profile;
+        this.isAdmin = profile.is_admin || false; // Actualizar estado de admin
       } catch (error) {
         console.error('Error loading profile:', error);
       }
@@ -64,6 +67,7 @@ export const useAuthStore = defineStore('auth', {
       this.accessToken = null;
       this.refreshToken = null;
       this.isAuthenticated = false;
+      this.isAdmin = false; // Resetear estado de admin al cerrar sesión
     },
 
     async checkAuth() {

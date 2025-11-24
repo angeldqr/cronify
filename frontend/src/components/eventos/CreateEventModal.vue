@@ -230,8 +230,6 @@
             input-debounce="300"
             option-value="id"
             option-label="email"
-            emit-value
-            map-options
             @filter="filterUsuarios"
             placeholder="Escribe el correo electrónico del usuario"
             :loading="loadingUsuarios"
@@ -440,7 +438,7 @@ const dateOptions = (date) => {
   return selectedDate >= today;
 };
 
-const loadEventoData = () => {
+const loadEventoData = async () => {
   if (props.evento) {
     const fechaVencimiento = new Date(props.evento.fecha_vencimiento);
     
@@ -462,6 +460,20 @@ const loadEventoData = () => {
       url_descarga: archivo.url_descarga
     }));
     
+    // Obtener los IDs de usuarios notificados
+    const usuariosNotificadosIds = props.evento.notificar_a_ids || props.evento.notificar_a || [];
+    
+    // Cargar los usuarios completos desde los IDs
+    // Primero asegurarse de que los usuarios disponibles están cargados
+    if (usuariosDisponibles.value.length === 0) {
+      await fetchUsuarios();
+    }
+    
+    // Buscar los objetos completos de los usuarios notificados
+    const usuariosNotificadosObjetos = usuariosDisponibles.value.filter(
+      usuario => usuariosNotificadosIds.includes(usuario.id)
+    );
+    
     formData.value = {
       asunto: props.evento.asunto || '',
       fecha: fecha,
@@ -470,7 +482,7 @@ const loadEventoData = () => {
       notificacion_cantidad: props.evento.notificacion_valor || 7,
       notificacion_unidad: props.evento.notificacion_unidad || 'días',
       es_publico: props.evento.es_publico ?? true,
-      notificar_a: props.evento.notificar_a || [],
+      notificar_a: usuariosNotificadosObjetos,
       archivos: archivosExistentes
     };
     
@@ -724,6 +736,11 @@ const handleSubmit = async () => {
     const fechaISO = `${anio}-${mes}-${dia}`;
     const fechaHora = `${fechaISO}T${formData.value.hora}:00`;
 
+    // Extraer solo los IDs de los usuarios notificados (pueden ser objetos o IDs)
+    const notificarAIds = formData.value.notificar_a.map(usuario => 
+      typeof usuario === 'object' ? usuario.id : usuario
+    );
+
     const eventoData = {
       asunto: formData.value.asunto,
       descripcion: formData.value.descripcion,
@@ -731,7 +748,7 @@ const handleSubmit = async () => {
       notificacion_valor: formData.value.notificacion_cantidad,
       notificacion_unidad: formData.value.notificacion_unidad,
       es_publico: formData.value.es_publico,
-      notificar_a: formData.value.notificar_a
+      notificar_a: notificarAIds
     };
 
     let evento;
@@ -826,10 +843,10 @@ const handleClose = () => {
   }
 };
 
-onMounted(() => {
-  fetchUsuarios();
+onMounted(async () => {
+  await fetchUsuarios();
   if (isEditMode.value) {
-    loadEventoData();
+    await loadEventoData();
   }
   
 

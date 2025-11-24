@@ -213,6 +213,27 @@
                   <q-item-label class="text-weight-medium">Configuración</q-item-label>
                 </q-item-section>
               </q-item>
+
+              <!-- Sección de Administrador (solo visible para admins) -->
+              <q-item
+                v-if="authStore.isAdmin"
+                clickable
+                v-ripple
+                :active="$route.name === 'administradores'"
+                @click="$router.push('/administradores')"
+                active-class="nav-item-active"
+                class="rounded-borders nav-item q-mt-md"
+              >
+                <q-item-section avatar>
+                  <q-icon name="admin_panel_settings" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-weight-medium">Administradores</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-badge color="red" label="Admin" />
+                </q-item-section>
+              </q-item>
             </q-list>
           </div>
 
