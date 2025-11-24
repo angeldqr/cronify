@@ -6,7 +6,10 @@ from .views import (
     list_users,
     MicrosoftLoginView,
     MicrosoftCallbackView,
-    refresh_microsoft_token
+    refresh_microsoft_token,
+    list_all_users,
+    promote_to_admin,
+    remove_admin
 )
 
 urlpatterns = [
@@ -26,5 +29,10 @@ urlpatterns = [
     path('microsoft/login/', MicrosoftLoginView.as_view(), name='microsoft_login'),
     path('microsoft/callback/', MicrosoftCallbackView.as_view(), name='microsoft_callback'),
     path('microsoft/refresh-token/', refresh_microsoft_token, name='refresh_microsoft_token'),
+    
+    # Administración (solo admins)
+    path('admins/', list_all_users, name='list_all_users'),
+    path('admins/<int:user_id>/promote/', promote_to_admin, name='promote_to_admin'),
+    path('admins/<int:user_id>/demote/', remove_admin, name='remove_admin'),
 ]
 

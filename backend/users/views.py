@@ -5,7 +5,8 @@ from rest_framework.views import APIView
 from django.shortcuts import redirect
 from django.conf import settings
 from .models import Usuario
-from .serializers import UserSerializer, UserProfileSerializer
+from .serializers import UserSerializer, UserProfileSerializer, AdminUserSerializer
+from .permissions import IsAdmin
 from .microsoft_auth import MicrosoftAuthService
 import logging
 
@@ -235,4 +236,105 @@ def refresh_microsoft_token(request):
             {'error': 'No se pudo refrescar el token'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+# ==================== VISTAS DE ADMINISTRACIÓN ====================
+
+@api_view(['GET'])
+@permission_classes([IsAdmin])
+def list_all_users(request):
+    """
+    Vista para que los administradores listen todos los usuarios.
+    Incluye información sobre quién es admin.
+    
+    Solo accesible por administradores.
+    """
+    users = Usuario.objects.filter(is_active=True).order_by('-date_joined')
+    serializer = AdminUserSerializer(users, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdmin])
+def promote_to_admin(request, user_id):
+    """
+    Vista para promover un usuario a administrador.
+    
+    Solo accesible por administradores.
+    """
+    try:
+        user = Usuario.objects.get(id=user_id, is_active=True)
+        
+        if user.is_admin:
+            return Response(
+                {'detail': 'El usuario ya es administrador'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user.is_admin = True
+        user.save()
+        
+        logger.info(f"Usuario {user.email} promovido a admin por {request.user.email}")
+        
+        return Response({
+            'detail': f'Usuario {user.nombre} promovido a administrador exitosamente',
+            'user': AdminUserSerializer(user).data
+        })
+        
+    except Usuario.DoesNotExist:
+        return Response(
+            {'error': 'Usuario no encontrado'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAdmin])
+def remove_admin(request, user_id):
+    """
+    Vista para remover privilegios de administrador de un usuario.
+    
+    Previene que el último admin se remueva a sí mismo.
+    Solo accesible por administradores.
+    """
+    try:
+        user = Usuario.objects.get(id=user_id, is_active=True)
+        
+        if not user.is_admin:
+            return Response(
+                {'detail': 'El usuario no es administrador'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Prevenir que se quite el último admin
+        admin_count = Usuario.objects.filter(is_admin=True, is_active=True).count()
+        if admin_count <= 1:
+            return Response(
+                {'error': 'No se puede remover el último administrador del sistema'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Prevenir que un admin se remueva a sí mismo
+        if user.id == request.user.id:
+            return Response(
+                {'error': 'No puedes remover tus propios privilegios de administrador'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user.is_admin = False
+        user.save()
+        
+        logger.info(f"Privilegios de admin removidos de {user.email} por {request.user.email}")
+        
+        return Response({
+            'detail': f'Privilegios de administrador removidos de {user.nombre} exitosamente',
+            'user': AdminUserSerializer(user).data
+        })
+        
+    except Usuario.DoesNotExist:
+        return Response(
+            {'error': 'Usuario no encontrado'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
 

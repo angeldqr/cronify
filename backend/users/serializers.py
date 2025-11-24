@@ -90,10 +90,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'last_name',
             'date_joined',
             'last_login',
+            'is_admin',
             'eventos_creados_count',
             'eventos_a_notificar',
         ]
-        read_only_fields = ['id', 'username', 'date_joined', 'last_login', 'eventos_creados_count', 'nombre', 'eventos_a_notificar']
+        read_only_fields = ['id', 'username', 'date_joined', 'last_login', 'eventos_creados_count', 'nombre', 'eventos_a_notificar', 'is_admin']
     
     def validate_email(self, value):
         """
@@ -123,5 +124,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
         # El método save() del modelo se encargará de actualizar 'nombre'
         instance.save()
         return instance
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    """
+    Serializador para listar usuarios en la gestión de administradores.
+    Incluye información básica y el estado de admin.
+    """
+    class Meta:
+        model = Usuario
+        fields = ['id', 'username', 'email', 'nombre', 'is_admin', 'date_joined']
+        read_only_fields = ['id', 'username', 'email', 'nombre', 'date_joined']
+
 
 

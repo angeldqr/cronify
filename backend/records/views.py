@@ -1,5 +1,5 @@
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.db.models import Q, Sum
 from django.utils import timezone
@@ -7,6 +7,7 @@ from datetime import datetime
 from .models import Evento, ArchivoAdjunto
 from .serializers import EventoSerializer, ArchivoAdjuntoSerializer
 from .permissions import IsOwnerOrReadOnly
+from users.permissions import IsAdmin
 
 class EventoViewSet(viewsets.ModelViewSet):
     """
@@ -160,6 +161,65 @@ class EventoViewSet(viewsets.ModelViewSet):
                 {'detail': 'Archivo no encontrado.'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+# ==================== VISTAS DE ADMINISTRACIÓN ====================
+
+@api_view(['GET'])
+@permission_classes([IsAdmin])
+def all_eventos_admin(request):
+    """
+    Vista para que los administradores vean TODOS los eventos del sistema.
+    
+    Incluye eventos públicos, privados y de cualquier usuario.
+    Solo accesible por administradores.
+    
+    Parámetros de búsqueda opcionales:
+    - search: Busca en asunto y descripción
+    - fecha_inicio: Filtra eventos desde esta fecha
+    - fecha_fin: Filtra eventos hasta esta fecha
+    - creador: Filtra por ID del creador
+    """
+    # Obtener TODOS los eventos no eliminados
+    queryset = Evento.objects.filter(deleted_at__isnull=True).order_by('-fecha_creacion')
+    
+    # Búsqueda por texto
+    search = request.query_params.get('search', None)
+    if search:
+        queryset = queryset.filter(
+            Q(asunto__icontains=search) | Q(descripcion__icontains=search)
+        )
+    
+    # Filtrado por rango de fechas
+    fecha_inicio = request.query_params.get('fecha_inicio', None)
+    fecha_fin = request.query_params.get('fecha_fin', None)
+    
+    if fecha_inicio:
+        try:
+            fecha_inicio_dt = datetime.fromisoformat(fecha_inicio.replace('Z', '+00:00'))
+            queryset = queryset.filter(fecha_vencimiento__gte=fecha_inicio_dt)
+        except ValueError:
+            pass
+    
+    if fecha_fin:
+        try:
+            fecha_fin_dt = datetime.fromisoformat(fecha_fin.replace('Z', '+00:00'))
+            queryset = queryset.filter(fecha_vencimiento__lte=fecha_fin_dt)
+        except ValueError:
+            pass
+    
+    # Filtrado por creador
+    creador = request.query_params.get('creador', None)
+    if creador:
+        queryset = queryset.filter(creador_id=creador)
+    
+    serializer = EventoSerializer(queryset, many=True)
+    
+    return Response({
+        'count': queryset.count(),
+        'eventos': serializer.data
+    })
+
 
 
 

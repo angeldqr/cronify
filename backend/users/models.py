@@ -8,6 +8,9 @@ class Usuario(AbstractUser):
     microsoft_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     microsoft_access_token = models.TextField(blank=True, null=True)
     microsoft_refresh_token = models.TextField(blank=True, null=True)
+    
+    # Campo para rol de administrador
+    is_admin = models.BooleanField(default=False, help_text='Designa si el usuario tiene privilegios de administrador')
 
     def save(self, *args, **kwargs):
         if not self.nombre and (self.first_name or self.last_name):
