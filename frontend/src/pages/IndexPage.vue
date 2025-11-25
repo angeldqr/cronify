@@ -161,8 +161,21 @@
             { 'has-events': day.events && day.events.length > 0 },
             { 'mobile': $q.screen.lt.sm }
           ]"
-          @click="day.events && day.events.length > 0 && viewEvent(day.events[0])"
+          @dblclick="handleDayDoubleClick(day)"
         >
+          <!-- Botón + para crear evento (aparece en hover) -->
+          <q-btn
+            v-if="day.isCurrentMonth"
+            flat
+            round
+            dense
+            icon="add"
+            size="xs"
+            color="primary"
+            class="add-event-btn"
+            @click.stop="openCreateEventForDay(day)"
+          />
+
           <div class="day-header">
             <div class="day-number">
               {{ day.date }}
@@ -198,7 +211,7 @@
             <div 
               v-if="day.events.length > ($q.screen.gt.md ? 4 : $q.screen.gt.sm ? 3 : 2)" 
               class="more-events"
-              @click.stop="showDayEvents(day)"
+              @click.stop="openDayEventsModal(day)"
             >
               <q-icon name="more_horiz" size="14px" />
               <span>{{ day.events.length - ($q.screen.gt.md ? 4 : $q.screen.gt.sm ? 3 : 2) }} más</span>
@@ -219,10 +232,66 @@
       </div>
     </q-card>
 
+    <!-- Modal ver todos los eventos del día -->
+    <q-dialog v-model="showDayEventsModal" transition-show="scale" transition-hide="scale">
+      <q-card class="day-events-modal">
+        <q-card-section class="day-events-modal-header">
+          <div class="row items-center justify-between">
+            <div class="row items-center q-gutter-sm">
+              <q-icon name="event" size="24px" color="white" />
+              <div>
+                <div class="text-h6 text-white">{{ selectedDayForModal ? format(selectedDayForModal.fullDate, "d 'de' MMMM", { locale: es }) : '' }}</div>
+                <div class="text-caption text-white" style="opacity: 0.8">{{ selectedDayForModal?.events?.length || 0 }} evento(s)</div>
+              </div>
+            </div>
+            <q-btn flat round dense icon="close" color="white" v-close-popup />
+          </div>
+        </q-card-section>
+
+        <q-card-section class="day-events-modal-content">
+          <div v-if="selectedDayForModal?.events?.length" class="events-list">
+            <div
+              v-for="event in selectedDayForModal.events"
+              :key="event.id"
+              class="event-item"
+              @click="viewEventFromModal(event)"
+            >
+              <div class="event-item-indicator" :class="event.es_publico ? 'indicator-public' : 'indicator-private'"></div>
+              <div class="event-item-content">
+                <div class="event-item-title">{{ event.asunto }}</div>
+                <div class="event-item-time">
+                  <q-icon name="schedule" size="12px" />
+                  {{ event.hora ? event.hora.slice(0, 5) : 'Todo el día' }}
+                </div>
+              </div>
+              <div class="event-item-badges">
+                <q-badge v-if="event.notificacion_enviada" color="green" text-color="white" class="q-mr-xs">
+                  <q-icon name="notifications_active" size="12px" />
+                </q-badge>
+                <q-icon :name="event.es_publico ? 'public' : 'lock'" size="16px" :color="event.es_publico ? 'blue-6' : 'orange-7'" />
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions class="day-events-modal-actions">
+          <q-btn
+            unelevated
+            icon="add"
+            label="Crear evento en este día"
+            color="primary"
+            class="full-width"
+            @click="createEventFromDayModal"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <!-- Modal crear evento -->
     <q-dialog v-model="showCreateModal" transition-show="scale" transition-hide="scale">
       <CreateEventModal
         :evento="eventoToEdit"
+        :preselected-date="preselectedDate"
         @close="showCreateModal = false"
         @created="handleEventCreated"
         @updated="handleEventUpdated"
@@ -257,8 +326,11 @@ const eventosStore = useEventosStore();
 const currentDate = ref(new Date());
 const showCreateModal = ref(false);
 const showDetailModal = ref(false);
+const showDayEventsModal = ref(false);
 const selectedEvent = ref(null);
 const eventoToEdit = ref(null);
+const selectedDayForModal = ref(null);
+const preselectedDate = ref(null);
 const showFilters = ref(false);
 const searchText = ref('');
 const searchTimeout = ref(null);
@@ -347,14 +419,45 @@ const handleEventDeleted = () => {
 
 const openCreateModal = () => {
   eventoToEdit.value = null;
+  preselectedDate.value = null;
   showCreateModal.value = true;
 };
 
-const showDayEvents = (day) => {
-  // Por ahora muestra el primer evento, pero podría expandirse a mostrar todos
-  if (day.events && day.events.length > 0) {
-    viewEvent(day.events[0]);
-  }
+// Abrir modal de crear evento con fecha pre-seleccionada (desde botón + o doble clic)
+const openCreateEventForDay = (day) => {
+  if (!day.isCurrentMonth) return;
+  eventoToEdit.value = null;
+  preselectedDate.value = day.fullDate;
+  showCreateModal.value = true;
+};
+
+// Manejar doble clic en un día
+const handleDayDoubleClick = (day) => {
+  if (!day.isCurrentMonth) return;
+  openCreateEventForDay(day);
+};
+
+// Abrir modal con todos los eventos del día
+const openDayEventsModal = (day) => {
+  selectedDayForModal.value = day;
+  showDayEventsModal.value = true;
+};
+
+// Ver evento desde el modal del día
+const viewEventFromModal = (event) => {
+  showDayEventsModal.value = false;
+  setTimeout(() => {
+    viewEvent(event);
+  }, 200);
+};
+
+// Crear evento desde el modal del día
+const createEventFromDayModal = () => {
+  const day = selectedDayForModal.value;
+  showDayEventsModal.value = false;
+  setTimeout(() => {
+    openCreateEventForDay(day);
+  }, 200);
 };
 
 // Búsqueda instantánea con debounce (500ms)
@@ -524,12 +627,39 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
 
+  // Botón + para crear evento (hover)
+  .add-event-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: all 0.2s ease;
+    background: #1976d2 !important;
+    color: white !important;
+    z-index: 5;
+    width: 24px;
+    height: 24px;
+    min-height: 24px;
+    
+    &:hover {
+      transform: scale(1.1);
+      background: #1565c0 !important;
+      box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+    }
+  }
+
   &:hover:not(.other-month) {
     background: linear-gradient(135deg, #f8fbff 0%, #f0f7ff 100%);
     box-shadow: inset 0 0 0 2px #1976d2;
     transform: translateY(-2px);
     z-index: 1;
     border-color: #1976d2;
+
+    .add-event-btn {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
   &.is-today {
@@ -539,8 +669,8 @@ onMounted(() => {
     
     .day-number {
       color: #1565c0;
-      font-weight: 800;
-      font-size: 18px;
+      font-weight: 600;
+      font-size: 16px;
     }
 
     &:hover {
@@ -574,6 +704,12 @@ onMounted(() => {
     min-height: 90px;
     padding: 8px;
 
+    // En móvil siempre mostrar el botón +
+    .add-event-btn {
+      opacity: 0.8;
+      transform: scale(0.9);
+    }
+
     &:hover {
       transform: none;
       box-shadow: none;
@@ -595,10 +731,10 @@ onMounted(() => {
 }
 
 .day-number {
-  font-size: 15px;
-  font-weight: 700;
-  color: #2c3e50;
-  letter-spacing: -0.3px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #37474f;
+  letter-spacing: 0;
   transition: all 0.2s ease;
 }
 
@@ -634,7 +770,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 600;
+  font-weight: 500;
+  letter-spacing: 0.2px;
   position: relative;
   overflow: hidden;
   border: 1px solid transparent;
@@ -734,7 +871,7 @@ onMounted(() => {
 .more-events {
   font-size: 10px;
   color: #1976d2;
-  font-weight: 700;
+  font-weight: 500;
   padding: 6px 10px;
   background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
   border-radius: 8px;
@@ -918,6 +1055,101 @@ onMounted(() => {
 
   .more-events {
     font-size: 10px;
+  }
+}
+
+// Modal para ver todos los eventos del día
+.day-events-modal {
+  width: 400px;
+  max-width: 95vw;
+  border-radius: 16px;
+  overflow: hidden;
+
+  .day-events-modal-header {
+    background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+    padding: 16px 20px;
+  }
+
+  .day-events-modal-content {
+    padding: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #f8f9fa;
+  }
+
+  .day-events-modal-actions {
+    padding: 12px 16px;
+    background: white;
+    border-top: 1px solid #e0e0e0;
+  }
+}
+
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.event-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: white;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+  &:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background: #f0f7ff;
+  }
+
+  .event-item-indicator {
+    width: 4px;
+    height: 36px;
+    border-radius: 2px;
+    flex-shrink: 0;
+
+    &.indicator-public {
+      background: linear-gradient(180deg, #4caf50 0%, #388e3c 100%);
+    }
+
+    &.indicator-private {
+      background: linear-gradient(180deg, #ff9800 0%, #f57c00 100%);
+    }
+  }
+
+  .event-item-content {
+    flex: 1;
+    min-width: 0;
+
+    .event-item-title {
+      font-weight: 600;
+      color: #2c3e50;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+
+    .event-item-time {
+      font-size: 12px;
+      color: #7f8c8d;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+
+  .event-item-badges {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
   }
 }
 </style>

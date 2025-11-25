@@ -443,6 +443,10 @@ const props = defineProps({
   evento: {
     type: Object,
     default: null
+  },
+  preselectedDate: {
+    type: Date,
+    default: null
   }
 });
 
@@ -925,6 +929,12 @@ onMounted(async () => {
   await fetchUsuarios();
   if (isEditMode.value) {
     await loadEventoData();
+  } else if (props.preselectedDate) {
+    // Si hay una fecha pre-seleccionada (desde el calendario), usarla
+    const dia = String(props.preselectedDate.getDate()).padStart(2, '0');
+    const mes = String(props.preselectedDate.getMonth() + 1).padStart(2, '0');
+    const anio = props.preselectedDate.getFullYear();
+    formData.value.fecha = `${dia}/${mes}/${anio}`;
   }
   
 
